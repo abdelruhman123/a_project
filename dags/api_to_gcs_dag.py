@@ -12,7 +12,7 @@ BQREADY_DIR = "/usr/local/airflow/include/output/bq_ready" # parquet + schema
 os.makedirs(RAW_DIR, exist_ok=True)
 os.makedirs(BQREADY_DIR, exist_ok=True)
 
-# GCS buckets
+# GCS bucket
 BUCKET = "your-bucket-name"  
 
 # API endpoints
