@@ -1,7 +1,7 @@
 from airflow.decorators import dag, task
 from datetime import datetime
-from include.helpers.helpers import call_api
-from include.schemas.sellers_schema import SELLERS_SCHEMA
+from dags.include.helpers.helpers import call_api
+from dags.include.schemas.sellers_schema import SELLERS_SCHEMA
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
 import os, json, pandas as pd
 
