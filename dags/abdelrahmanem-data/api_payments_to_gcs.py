@@ -1,7 +1,7 @@
 from airflow.decorators import dag, task
 from datetime import datetime
 from include.helpers.helpers import call_api
-from include.schemas import ORDER_PAYMENTS_SCHEMA
+from include.schemas.payments_schema import PAYMENTS_SCHEMA
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
 import os, json, pandas as pd
 
@@ -11,11 +11,11 @@ BQREADY_DIR = "/usr/local/airflow/include/output/bq_ready"
 os.makedirs(RAW_DIR, exist_ok=True)
 os.makedirs(BQREADY_DIR, exist_ok=True)
 
-# GCS info
+# GCS bucket
 BUCKET = "ready-labs-postgres-to-gcs"
 FOLDER = "abdelrahmanem-data/"
 
-# API
+# API endpoint
 PAYMENTS_URL = "https://payments-table-834721874829.europe-west1.run.app"
 
 def _schema_to_pandas_dtypes(schema):
@@ -49,9 +49,9 @@ def _save_bq_schema_json(schema, path):
     start_date=datetime(2023, 1, 1),
     schedule="@daily",
     catchup=False,
-    tags=["payments","api","gcs"]
+    tags=["api","gcs","payments"]
 )
-def payments_api_to_gcs():
+def api_payments_to_gcs():
 
     @task()
     def extract() -> str:
@@ -65,30 +65,30 @@ def payments_api_to_gcs():
 
     @task()
     def clean_and_type(raw_path: str) -> dict:
-        schema = ORDER_PAYMENTS_SCHEMA
+        schema = PAYMENTS_SCHEMA
         df = pd.read_json(raw_path)
         assert df["order_id"].notna().all(), "order_id has NULL values"
-        df = _enforce_schema(df, schema)
+        df = _enforce_schema(df, PAYMENTS_SCHEMA)
         out_dir = os.path.join(BQREADY_DIR, "order_payments", "{{ ds }}")
         os.makedirs(out_dir, exist_ok=True)
         parquet_path = os.path.join(out_dir, "order_payments.parquet")
         df.to_parquet(parquet_path, index=False)
         schema_path = os.path.join(out_dir, "order_payments_schema.json")
-        _save_bq_schema_json(schema, schema_path)
+        _save_bq_schema_json(PAYMENTS_SCHEMA, schema_path)
         return {"parquet": parquet_path, "schema": schema_path}
 
     def upload_to_gcs(local_path: str, dst_path: str, task_id: str):
         return LocalFilesystemToGCSOperator(
             task_id=task_id,
             src=local_path,
-            dst=FOLDER + dst_path,
+            dst=dst_path,
             bucket=BUCKET,
             gcp_conn_id="google_cloud_default"
         )
 
-    raw = extract()
-    ready = clean_and_type(raw)
-    upload_to_gcs(ready["parquet"], "order_payments/order_payments.parquet", "upload_parquet")
-    upload_to_gcs(ready["schema"], "order_payments/order_payments_schema.json", "upload_schema")
+    payments_raw = extract()
+    payments_ready = clean_and_type(payments_raw)
+    upload_to_gcs(payments_ready["parquet"], "bq_ready/order_payments.parquet", "upload_payments_parquet")
+    upload_to_gcs(payments_ready["schema"], "bq_ready/order_payments_schema.json", "upload_payments_schema")
 
-payments_api_to_gcs = payments_api_to_gcs()
+api_payments_to_gcs = api_payments_to_gcs()

@@ -1,18 +1,21 @@
 from airflow.decorators import dag, task
 from datetime import datetime
 from include.helpers.helpers import call_api
-from include.schemas import SELLERS_SCHEMA
+from include.schemas.sellers_schema import SELLERS_SCHEMA
 from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
 import os, json, pandas as pd
 
+# Local staging
 RAW_DIR = "/usr/local/airflow/include/output/raw"
 BQREADY_DIR = "/usr/local/airflow/include/output/bq_ready"
 os.makedirs(RAW_DIR, exist_ok=True)
 os.makedirs(BQREADY_DIR, exist_ok=True)
 
+# GCS bucket
 BUCKET = "ready-labs-postgres-to-gcs"
 FOLDER = "abdelrahmanem-data/"
 
+# API endpoint
 SELLERS_URL = "https://sellers-table-834721874829.europe-west1.run.app"
 
 def _schema_to_pandas_dtypes(schema):
@@ -46,9 +49,9 @@ def _save_bq_schema_json(schema, path):
     start_date=datetime(2023, 1, 1),
     schedule="@daily",
     catchup=False,
-    tags=["sellers","api","gcs"]
+    tags=["api","gcs","sellers"]
 )
-def sellers_api_to_gcs():
+def api_sellers_to_gcs():
 
     @task()
     def extract() -> str:
@@ -65,27 +68,27 @@ def sellers_api_to_gcs():
         schema = SELLERS_SCHEMA
         df = pd.read_json(raw_path)
         assert df["seller_id"].notna().all(), "seller_id has NULL values"
-        df = _enforce_schema(df, schema)
+        df = _enforce_schema(df, SELLERS_SCHEMA)
         out_dir = os.path.join(BQREADY_DIR, "sellers", "{{ ds }}")
         os.makedirs(out_dir, exist_ok=True)
         parquet_path = os.path.join(out_dir, "sellers.parquet")
         df.to_parquet(parquet_path, index=False)
         schema_path = os.path.join(out_dir, "sellers_schema.json")
-        _save_bq_schema_json(schema, schema_path)
+        _save_bq_schema_json(SELLERS_SCHEMA, schema_path)
         return {"parquet": parquet_path, "schema": schema_path}
 
     def upload_to_gcs(local_path: str, dst_path: str, task_id: str):
         return LocalFilesystemToGCSOperator(
             task_id=task_id,
             src=local_path,
-            dst=FOLDER + dst_path,
+            dst=dst_path,
             bucket=BUCKET,
             gcp_conn_id="google_cloud_default"
         )
 
-    raw = extract()
-    ready = clean_and_type(raw)
-    upload_to_gcs(ready["parquet"], "sellers/sellers.parquet", "upload_parquet")
-    upload_to_gcs(ready["schema"], "sellers/sellers_schema.json", "upload_schema")
+    sellers_raw = extract()
+    sellers_ready = clean_and_type(sellers_raw)
+    upload_to_gcs(sellers_ready["parquet"], "bq_ready/sellers.parquet", "upload_sellers_parquet")
+    upload_to_gcs(sellers_ready["schema"], "bq_ready/sellers_schema.json", "upload_sellers_schema")
 
-sellers_api_to_gcs = sellers_api_to_gcs()
+api_sellers_to_gcs = api_sellers_to_gcs()

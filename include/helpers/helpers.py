@@ -1,32 +1,15 @@
 import requests
-import json
-import os
+import pandas as pd
 
-def call_api(url: str, params: dict = None, headers: dict = None):
+def call_api(url: str) -> pd.DataFrame:
     """
-    Function to call an API and return JSON response.
+    Function to call an API endpoint and return data as a pandas DataFrame
     """
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()  # لو فيه error يوقف
-    return response.json()
-
-
-def save_json_to_file(data: dict, filepath: str):
-    """
-    Save JSON response locally to a file.
-    """
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def save_list_to_csv(data: list, filepath: str, fieldnames: list):
-    """
-    Save a list of dicts (API response) into CSV.
-    """
-    import csv
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(data)
+    try:
+        response = requests.get(url)
+        response.raise_for_status() # Raise an error for bad status codes
+        data = response.json()
+        return pd.DataFrame(data)
+    except Exception as e:
+        print(f"Error calling API {url}: {e}")
+        return pd.DataFrame()
