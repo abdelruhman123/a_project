@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 import pendulum
 from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
