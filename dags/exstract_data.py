@@ -1,136 +1,85 @@
+import os
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from google.cloud import storage
-import pandas as pd
-from datetime import datetime, timedelta
-import json
+from airflow.providers.google.cloud.transfers.postgres_to_gcs import PostgresToGCSOperator
+from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+from airflow.utils.dates import days_ago
 
-# Helper Functions
+# info
+PROJECT_ID = "ready-de26"
+BUCKET = "ready-labs-postgres-to-gcs"
+BQ_STAGE_DATASET = "project_landing"  
+BQ_LANDING_DATASET = "project_landing"
 
-def get_last_loaded_timestamp():
-    """
-    Retrieve the last loaded timstamp from BigQuery or any other storage.
-    This is just an example function, you can store the timestamp in BigQuery, a database, or a file.
-    """
-    # For simplicity, let's assume the timestamp is stored in a file or database.
-    # For example purposes, we set it to '2025-08-23' here.
-    # Ideally, fetch it dynamically from a database or stateful storage.
-    return '2025-08-23'
-
-def extract_data_from_postgres(conn_id, query, last_loaded_timestamp):
-    """
-    Extract data from PostgreSQL using incremental loading (based on updated_at_timestamp).
-    """
-    # Create a Postgres hook to connect to the PostgreSQL database
-    pg_hook = PostgresHook(postgres_conn_id=conn_id)
-    sql = query.format(last_loaded_timestamp=last_loaded_timestamp)
-    
-    # Extract data as pandas DataFrame
-    df = pg_hook.get_pandas_df(sql)
-    return df
-
-def upload_to_gcs(bucket_name, folder_name, file_name, data):
-    """
-    Upload extracted data to Google Cloud Storage (GCS).
-    """
-    client = storage.Client()
-    bucket = client.get_bucket(bucket_name)
-    blob = bucket.blob(f"{folder_name}/{file_name}")
-    
-    # Upload data as JSON
-    blob.upload_from_string(data, content_type='application/json')
-    print(f"Data uploaded to gs://{bucket_name}/{folder_name}/{file_name}")
-
-def convert_df_to_json(df):
-    """
-    Convert pandas DataFrame to JSON format.
-    """
-    return df.to_json(orient='records', lines=True)
-
-# Default arguments for the DAG
-default_args = {
-    'owner': 'airflow',
-    'depends_on_past': False,
-    'start_date': datetime(2025, 8, 23),  # Start date for DAG
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+#  orders_products dtables to be processed
+TABLES = {
+    "order_items": "public.order_items",
+    "orders": "public.orders",
+    "products": "public.products",
+    "order_reviews": "public.order_reviews",
+    "product_category_name_translation": "public.product_category_name_translation"
 }
 
-# Define the DAG
-dag = DAG(
-    'extract_load_postgres_to_gcs',
+# 
+default_args = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "retries": 1,
+}
+
+#  merge scripts
+SQL_FOLDER = os.path.join(os.path.dirname(__file__), "SQL", "Merge")
+
+# DAG definition
+with DAG(
+    "extract_load_postgres_to_gcs",  # DAG name remains the same
     default_args=default_args,
-    description='A simple ELT pipeline to extract data from Postgres and upload to GCS',
-    schedule_interval=timedelta(days=1),  # Run daily
-    catchup=False,
-)
+    description="ETL: Postgres -> GCS -> Stage -> Landing using merge SQL scripts",
+    schedule_interval="@daily",  # Run daily
+    start_date=days_ago(1),
+    catchup=True,
+    max_active_runs=1,
+) as dag:
 
-# Function to extract and upload data from DB1 (orders_products_db)
-def extract_and_upload_db1_data():
-    last_loaded_timestamp = get_last_loaded_timestamp()  # Retrieve the last loaded timestamp dynamically
-    
-    # Define queries to extract data (replace with actual queries)
-    query_orders = """
-    SELECT * FROM public.orders
-    WHERE updated_at_timestamp > '{last_loaded_timestamp}'
-    """
-    query_order_items = """
-    SELECT * FROM public.order_items
-    WHERE updated_at_timestamp > '{last_loaded_timestamp}'
-    """
-    
-    # Extract data from DB1
-    orders_df = extract_data_from_postgres('postgres_conn_db1', query_orders, last_loaded_timestamp)
-    order_items_df = extract_data_from_postgres('postgres_conn_db1', query_order_items, last_loaded_timestamp)
-    
-    # Convert to JSON format
-    orders_json = convert_df_to_json(orders_df)
-    order_items_json = convert_df_to_json(order_items_df)
-    
-    # Upload data to GCS (for DB1)
-    upload_to_gcs('ready-labs-postgres-to-gcs', 'abdelrahman_db1', 'orders_abdelrahman.json', orders_json)
-    upload_to_gcs('ready-labs-postgres-to-gcs', 'abdelrahman_db1', 'order_items_abdelrahman.json', order_items_json)
+    for table_name, pg_table in TABLES.items():
 
-# Function to extract and upload data from DB2 (customers_db)
-def extract_and_upload_db2_data():
-    last_loaded_timestamp = get_last_loaded_timestamp()  # Retrieve the last loaded timestamp dynamically
-    
-    # Define queries to extract data (replace with actual queries)
-    query_customers = """
-    SELECT * FROM public.customers
-    WHERE updated_at_timestamp > '{last_loaded_timestamp}'
-    """
-    
-    query_geolocation = """
-    SELECT * FROM public.geolocation
-    WHERE updated_at_timestamp > '{last_loaded_timestamp}'
-    """
-    
-    # Extract data from DB2
-    customers_df = extract_data_from_postgres('postgres_conn_db2', query_customers, last_loaded_timestamp)
-    geolocation_df = extract_data_from_postgres('postgres_conn_db2', query_geolocation, last_loaded_timestamp)
-    
-    # Convert to JSON format
-    customers_json = convert_df_to_json(customers_df)
-    geolocation_json = convert_df_to_json(geolocation_df)
-    
-    # Upload data to GCS (for DB2)
-    upload_to_gcs('ready-labs-postgres-to-gcs', 'abdelrahman_db2', 'customers_abdelrahman.json', customers_json)
-    upload_to_gcs('ready-labs-postgres-to-gcs', 'abdelrahman_db2', 'geolocation_abdelrahman.json', geolocation_json)
+        #  Extract data from Postgres to GCS ##
+        extract_to_gcs = PostgresToGCSOperator(
+            task_id=f"extract_{table_name}_to_gcs",
+            postgres_conn_id="postgres_db_abdelrahman",  # Postgres connection ID 
+            sql=f"SELECT * FROM {pg_table} WHERE updated_at_timestamp::date = '{{{{ ds }}}}'",
+            bucket=BUCKET,
+            filename=f"abdelrahman_db1/{table_name}/dt={{{{ ds[:4] }}}}/{{{{ ds[5:7] }}}}/{{{{ ds[8:] }}}}/data.json",  # GCS folder path updated
+            export_format="json",  # Exporting as JSON
+            gzip=False,
+        )
 
-# Define the Airflow tasks
-task_extract_db1 = PythonOperator(
-    task_id='extract_and_upload_db1_data',
-    python_callable=extract_and_upload_db1_data,
-    dag=dag
-)
+        #  Load data from GCS to staging in BigQuery
+        load_to_stage = GCSToBigQueryOperator(
+            task_id=f"load_{table_name}_to_stage",
+            bucket=BUCKET,
+            source_objects=[f"abdelrahman_db1/{table_name}/dt={{{{ ds[:4] }}}}/{{{{ ds[5:7] }}}}/{{{{ ds[8:] }}}}/data.json"],  # GCS path updated
+            destination_project_dataset_table=f"{PROJECT_ID}.{BQ_STAGE_DATASET}.{table_name}_stage_abdelrahman",  # BigQuery suffix updated
+            source_format="NEWLINE_DELIMITED_JSON",  # Assuming we're uploading JSON data
+            write_disposition="WRITE_TRUNCATE",
+            autodetect=True,
+        )
+        #  Read merge SQL script
+        sql_file_path = os.path.join(SQL_FOLDER, f"{table_name}_merge.sql")
+        with open(sql_file_path, "r") as f:
+            merge_sql = f.read()
 
-task_extract_db2 = PythonOperator(
-    task_id='extract_and_upload_db2_data',
-    python_callable=extract_and_upload_db2_data,
-    dag=dag
-)
+        #  Merge data from staging to landing in BigQuery
+        merge_to_landing = BigQueryInsertJobOperator(
+            task_id=f"merge_{table_name}_to_landing",
+            configuration={ 
+                "query": {
+                    "query": merge_sql,
+                    "useLegacySql": False,
+                }
+            },
+            location="US",
+        )
 
-# Set task dependencies
-task_extract_db1 >> task_extract_db2  # Run task for DB1 first, then DB2
+        #  Define task dependencies
+        extract_to_gcs >> load_to_stage >> merge_to_landing
