@@ -40,7 +40,7 @@ def extract_and_upload_data():
     payment_data = fetch_data_from_api(payment_url)
     seller_data = fetch_data_from_api(seller_url)
 
-    # Check if data was fetched successfully and upload it to GCS
+    # Check if data was fetched successfully and upload it to GCs
     if payment_data is not None:
         payment_json = json.dumps(payment_data)
         upload_to_gcs('ready-labs-postgres-to-gcs', 'abdelrahmanem-data', 'payments_data.json', payment_json)
