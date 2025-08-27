@@ -5,13 +5,13 @@ from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQue
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.utils.dates import days_ago
 
-# info
+# Info for GCP and BigQuery
 PROJECT_ID = "ready-de26"
 BUCKET = "ready-labs-postgres-to-gcs"
 BQ_STAGE_DATASET = "project_landing"  
 BQ_LANDING_DATASET = "project_landing"
 
-#  orders_products dtables to be processed
+# Tables to be processed
 TABLES = {
     "order_items": "public.order_items",
     "orders": "public.orders",
@@ -20,15 +20,15 @@ TABLES = {
     "product_category_name_translation": "public.product_category_name_translation"
 }
 
-# 
+# Default arguments for the DAG
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "retries": 1,
 }
 
-#  merge scripts
-SQL_FOLDER = os.path.join(os.path.dirname(__file__), "SQL", "Merge")
+# Path to SQL merge scripts
+SQL_FOLDER = os.path.join(os.path.dirname(__file__), "SQL", "Merge")  # Path to Merge folder
 
 # DAG definition
 with DAG(
@@ -43,10 +43,10 @@ with DAG(
 
     for table_name, pg_table in TABLES.items():
 
-        #  Extract data from Postgres to GCS ##
+        # --- Step 1: Extract data from Postgres to GCS ---
         extract_to_gcs = PostgresToGCSOperator(
             task_id=f"extract_{table_name}_to_gcs",
-            postgres_conn_id="postgres_db_abdelrahman",  # Postgres connection ID 
+            postgres_conn_id="postgres_db_abdelrahman",  # Postgres connection ID
             sql=f"SELECT * FROM {pg_table} WHERE updated_at_timestamp::date = '{{{{ ds }}}}'",
             bucket=BUCKET,
             filename=f"abdelrahman_db1/{table_name}/dt={{{{ ds[:4] }}}}/{{{{ ds[5:7] }}}}/{{{{ ds[8:] }}}}/data.json",  # GCS folder path updated
@@ -54,7 +54,7 @@ with DAG(
             gzip=False,
         )
 
-        #  Load data from GCS to staging in BigQuery
+        # --- Step 2: Load data from GCS to staging in BigQuery ---
         load_to_stage = GCSToBigQueryOperator(
             task_id=f"load_{table_name}_to_stage",
             bucket=BUCKET,
@@ -64,12 +64,13 @@ with DAG(
             write_disposition="WRITE_TRUNCATE",
             autodetect=True,
         )
-        #  Read merge SQL script
-        sql_file_path = os.path.join(SQL_FOLDER, f"{table_name}_merge.sql")
+
+        # --- Step 3: Read merge SQL script ---
+        sql_file_path = os.path.join(SQL_FOLDER, f"{table_name}_merge.sql")  # Correct path to SQL file
         with open(sql_file_path, "r") as f:
             merge_sql = f.read()
 
-        #  Merge data from staging to landing in BigQuery
+        # --- Step 4: Merge data from staging to landing in BigQuery ---
         merge_to_landing = BigQueryInsertJobOperator(
             task_id=f"merge_{table_name}_to_landing",
             configuration={ 
@@ -81,5 +82,5 @@ with DAG(
             location="US",
         )
 
-        #  Define task dependencies
+        # --- Step 5: Set task dependencies ---
         extract_to_gcs >> load_to_stage >> merge_to_landing
