@@ -28,7 +28,7 @@ default_args = {
 }
 
 # Path to SQL merge scripts
-SQL_FOLDER = os.path.join(os.path.dirname(__file__), "SQL", "Merge")  # Path to Merge folder
+SQL_FOLDER = os.path.join(os.path.dirname(__file__), "sql", "merge")  # Path to Merge folder
 
 # DAG definition
 with DAG(
