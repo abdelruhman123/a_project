@@ -8,9 +8,19 @@ import json
 
 # Helper Functions
 
+def get_last_loaded_timestamp():
+    """
+    Retrieve the last loaded timstamp from BigQuery or any other storage.
+    This is just an example function, you can store the timestamp in BigQuery, a database, or a file.
+    """
+    # For simplicity, let's assume the timestamp is stored in a file or database.
+    # For example purposes, we set it to '2025-08-23' here.
+    # Ideally, fetch it dynamically from a database or stateful storage.
+    return '2025-08-23'
+
 def extract_data_from_postgres(conn_id, query, last_loaded_timestamp):
     """
-    Extract data from PostgreSQL using incremental loading
+    Extract data from PostgreSQL using incremental loading (based on updated_at_timestamp).
     """
     # Create a Postgres hook to connect to the PostgreSQL database
     pg_hook = PostgresHook(postgres_conn_id=conn_id)
@@ -22,7 +32,7 @@ def extract_data_from_postgres(conn_id, query, last_loaded_timestamp):
 
 def upload_to_gcs(bucket_name, folder_name, file_name, data):
     """
-    Upload extracted data to Google Cloud Storage
+    Upload extracted data to Google Cloud Storage (GCS).
     """
     client = storage.Client()
     bucket = client.get_bucket(bucket_name)
@@ -34,7 +44,7 @@ def upload_to_gcs(bucket_name, folder_name, file_name, data):
 
 def convert_df_to_json(df):
     """
-    Convert pandas DataFrame to JSON format
+    Convert pandas DataFrame to JSON format.
     """
     return df.to_json(orient='records', lines=True)
 
@@ -58,8 +68,7 @@ dag = DAG(
 
 # Function to extract and upload data from DB1 (orders_products_db)
 def extract_and_upload_db1_data():
-    # Define the incremental loading timestamp (you may store and update it dynamically)
-    last_loaded_timestamp = '2025-08-23'  # Placeholder, ideally should come from a record in BigQuery or DB
+    last_loaded_timestamp = get_last_loaded_timestamp()  # Retrieve the last loaded timestamp dynamically
     
     # Define queries to extract data (replace with actual queries)
     query_orders = """
@@ -85,7 +94,7 @@ def extract_and_upload_db1_data():
 
 # Function to extract and upload data from DB2 (customers_db)
 def extract_and_upload_db2_data():
-    last_loaded_timestamp = '2025-08-23'  # Placeholder
+    last_loaded_timestamp = get_last_loaded_timestamp()  # Retrieve the last loaded timestamp dynamically
     
     # Define queries to extract data (replace with actual queries)
     query_customers = """
