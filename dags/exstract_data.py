@@ -37,7 +37,7 @@ with DAG(
     end_date=datetime(2025, 8, 27),    
     catchup=True,
     max_active_runs=1,
-    tags=["abdelrahman", "db1_incremental_like_first"],
+    tags=["abdelrahman", "db1_incremental_like_first_run"],
 ) as dag:
 
     for table_name, pg_table in TABLES.items():
