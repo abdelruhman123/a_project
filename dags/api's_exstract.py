@@ -63,7 +63,7 @@ def upload_to_gcs(local_file_path: str, ds: str) -> str:
 
 # -------------------- DAG --------------------
 with DAG(
-    dag_id="abdelrahmanem_order_payments_api_ingestion_dag",
+    dag_id="abdelrahmanem_order_payments_api_dag",
     schedule_interval="@daily",
     start_date=datetime(2025, 8, 25),
     catchup=False,
