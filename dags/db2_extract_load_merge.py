@@ -7,31 +7,27 @@ from airflow.providers.google.cloud.transfers.postgres_to_gcs import PostgresToG
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 
-# ========= Configuration =========
-POSTGRES_CONN_DB1 = "postgres_abdelrahman_db"   # Airflow connection ID for DB1
+# ========= Config =========
+
+POSTGRES_CONN_DB2 = "postgres_abdelrahman_db2" 
+
 GCS_BUCKET = "ready-labs-postgres-to-gcs"
-GCS_PREFIX = "abdelrahman_db1"
+GCS_PREFIX = "abdelrahman_db2"
 
 BQ_PROJECT = "ready-de26"
 BQ_DATASET = "project_landing"
 BQ_FULL_DATASET = f"{BQ_PROJECT}.{BQ_DATASET}"
 BQ_LOCATION = "US"
 
-# DB1 tables (from schema)
-TABLES_DB1 = [
-    "orders",
-    "order_items",
-    "order_reviews",
-    "products",
-    "product_category_name_translation",
-    "sellers",
-    "order_payments",
+TABLES_DB2 = [
+    "customers",
+    "geolocation",
+    "leads_closed",
+    "leads_qualified",
 ]
 
-# If you have a timestamp column for incremental loads, set it here
-TIMESTAMP_COLUMN = None  
+TIMESTAMP_COLUMN = None   
 
-# Path to SQL merge scripts
 SQL_FOLDER = os.path.join(os.path.dirname(__file__), "sql", "merge")
 
 default_args = {
@@ -42,30 +38,29 @@ default_args = {
 }
 
 with DAG(
-    dag_id="abdelrahman_db1_parquet_pg_to_bq_with_merge",
+    dag_id="abdelrahman_db2_parquet_pg_to_bq_with_merge",
     default_args=default_args,
-    description="DB1: Postgres -> GCS (Parquet) -> BQ Staging (WRITE_TRUNCATE) -> MERGE to Landing",
+    description="DB2: Postgres -> GCS (Parquet) -> BQ Staging (WRITE_TRUNCATE) -> MERGE to Landing",
     schedule_interval="@daily",
     start_date=datetime(2025, 8, 23),
     end_date=datetime(2025, 8, 27),
     catchup=True,
     max_active_runs=1,
-    tags=["abdelrahman", "db1", "parquet", "staging", "landing"],
-    # Uncomment if you want the DAG paused by default
-    # is_paused_upon_creation=True,
+    tags=["abdelrahman", "db2", "parquet", "staging", "landing"],
+    is_paused_upon_creation=True,  
 ) as dag:
 
-    start = DummyOperator(task_id="start")
-    end = DummyOperator(task_id="end")
+    start_pipeline = DummyOperator(task_id="start_pipeline")
+    end_pipeline = DummyOperator(task_id="end_pipeline")
 
-    for tbl in TABLES_DB1:
-        # 1) Extract from Postgres to GCS (Parquet)
+    for tbl in TABLES_DB2:
+        # 1) Extract → GCS (Parquet)
         if TIMESTAMP_COLUMN:
             sql_query = f"""
                 SELECT *
                 FROM {tbl}
                 WHERE {TIMESTAMP_COLUMN} >= '{{{{ macros.ds_add(ds, -1) }}}}'
-                  AND {TIMESTAMP_COLUMN} < '{{{{ ds }}}}'
+                  AND {TIMESTAMP_COLUMN} <  '{{{{ ds }}}}'
             """
             parquet_name = "data.parquet"
         else:
@@ -73,8 +68,8 @@ with DAG(
             parquet_name = "full.parquet"
 
         extract_to_gcs = PostgresToGCSOperator(
-            task_id=f"extract_db1_{tbl}_to_gcs",
-            postgres_conn_id=POSTGRES_CONN_DB1,
+            task_id=f"abdelrahman_extract_db2_{tbl}_to_gcs_parquet",
+            postgres_conn_id=POSTGRES_CONN_DB2,
             sql=sql_query,
             bucket=GCS_BUCKET,
             filename=(
@@ -85,9 +80,9 @@ with DAG(
             gzip=False,
         )
 
-        # 2) Load from GCS to BigQuery (staging)
+        # 2) GCS → BigQuery (staging)
         load_to_staging = GCSToBigQueryOperator(
-            task_id=f"load_db1_{tbl}_to_staging",
+            task_id=f"abdelrahman_load_db2_{tbl}_to_staging_bq",
             bucket=GCS_BUCKET,
             source_objects=[
                 f"{GCS_PREFIX}/{tbl}/dt={{{{ ds[:4] }}}}/{{{{ ds[5:7] }}}}/{{{{ ds[8:] }}}}/{parquet_name}"
@@ -100,9 +95,9 @@ with DAG(
             location=BQ_LOCATION,
         )
 
-        # 3) Create landing table if not exists
+        # 3) Create landing if missing
         create_landing_if_missing = BigQueryInsertJobOperator(
-            task_id=f"create_db1_{tbl}_landing_if_missing",
+            task_id=f"abdelrahman_create_db2_{tbl}_landing_if_missing",
             configuration={
                 "query": {
                     "query": f"""
@@ -117,13 +112,13 @@ with DAG(
             location=BQ_LOCATION,
         )
 
-        # 4) Merge staging -> landing (SQL from file)
+        # 4) MERGE from file
         sql_file_path = os.path.join(SQL_FOLDER, f"{tbl}_merge.sql")
         with open(sql_file_path, "r") as f:
             merge_sql = f.read()
 
         merge_to_landing = BigQueryInsertJobOperator(
-            task_id=f"merge_db1_{tbl}_staging_to_landing",
+            task_id=f"abdelrahman_merge_db2_{tbl}_staging_to_landing",
             configuration={
                 "query": {
                     "query": merge_sql,
@@ -133,5 +128,4 @@ with DAG(
             location=BQ_LOCATION,
         )
 
-        # Dependencies
-        start >> extract_to_gcs >> load_to_staging >> create_landing_if_missing >> merge_to_landing >> end
+        start_pipeline >> extract_to_gcs >> load_to_staging >> create_landing_if_missing >> merge_to_landing >> end_pipeline
