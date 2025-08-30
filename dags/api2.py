@@ -11,14 +11,14 @@ from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQue
 # -------------------- Config --------------------
 GCP_CONN_ID = "google_cloud_default"
 GCS_BUCKET = "ready-labs-postgres-to-gcs"
-GCS_PREFIX = "abdelrahmanem-data/api/order_payments"
-API_URL = "https://payments-table-834721874829.europe-west1.run.app"
+GCS_PREFIX = "abdelrahmanem-data/api/sellers"   # path inside bucket
+API_URL = "https://sellers-table-834721874829.europe-west1.run.app"
 
 BIGQUERY_DATASET = "ready-de26.project_landing"
-BQ_TABLE = "order_payments_abdelrahmanem"
+BQ_TABLE = "sellers_abdelrahmanem"
 
 LOCAL_TMP_DIR = "/tmp"
-LOCAL_FILENAME = "order_payments.csv"
+LOCAL_FILENAME = "sellers.csv"
 LOCAL_FILE_PATH = os.path.join(LOCAL_TMP_DIR, LOCAL_FILENAME)
 
 
@@ -63,31 +63,31 @@ def upload_to_gcs(local_file_path: str, ds: str) -> str:
 
 # -------------------- DAG --------------------
 with DAG(
-    dag_id="abdelrahmanem_order_payments_api_ingestion_dag",
+    dag_id="abdelrahmanem_api_ingestion_dag",
     schedule_interval="@daily",
     start_date=datetime(2025, 8, 25),
     catchup=False,
-    tags=["api", "abdelrahmanem", "order_payments", "gcs-to-bq"],
+    tags=["api", "abdelrahmanem", "gcs-to-bq"],
 ) as dag:
 
     fetch_data = PythonOperator(
-        task_id="fetch_order_payments_from_api",
+        task_id="fetch_data_from_api",
         python_callable=fetch_api_data_and_save,
     )
 
     upload_file = PythonOperator(
-        task_id="upload_order_payments_to_gcs",
+        task_id="upload_file_to_gcs",
         python_callable=upload_to_gcs,
         op_kwargs={
-            "local_file_path": "{{ ti.xcom_pull(task_ids='fetch_order_payments_from_api') }}",
+            "local_file_path": "{{ ti.xcom_pull(task_ids='fetch_data_from_api') }}",
             "ds": "{{ ds }}",
         },
     )
 
     load_gcs_to_bq = GCSToBigQueryOperator(
-        task_id="load_order_payments_gcs_to_bq",
+        task_id="load_gcs_to_bq",
         bucket=GCS_BUCKET,
-        source_objects=["{{ ti.xcom_pull(task_ids='upload_order_payments_to_gcs') }}"],
+        source_objects=["{{ ti.xcom_pull(task_ids='upload_file_to_gcs') }}"],
         destination_project_dataset_table=f"{BIGQUERY_DATASET}.{BQ_TABLE}",
         source_format="CSV",
         skip_leading_rows=1,
@@ -98,4 +98,3 @@ with DAG(
     )
 
     fetch_data >> upload_file >> load_gcs_to_bq
-        
