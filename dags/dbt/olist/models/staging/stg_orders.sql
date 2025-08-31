@@ -8,5 +8,6 @@ select
   order_approved_at,
   order_delivered_carrier_date,
   order_delivered_customer_date,
-  order_estimated_delivery_date
+  order_estimated_delivery_date,
+  updated_at_timestamp
 from {{ source('project_landing','orders_landing_abdelrahman') }}

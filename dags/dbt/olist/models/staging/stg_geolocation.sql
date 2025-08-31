@@ -5,5 +5,6 @@ select
   geolocation_lat,
   geolocation_lng,
   geolocation_city,
-  geolocation_state
+  geolocation_state,
+  updated_at_timestamp
 from {{ source('project_landing','geolocation_landing_abdelrahman') }}
