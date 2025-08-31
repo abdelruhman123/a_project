@@ -1,10 +1,12 @@
 {{ config(materialized='view') }}
 
--- Average number of orders per customer
-with per_customer as (
-  select customer_id, count(*) as order_count
+with per_cust as (
+  select
+    customer_id,
+    count(distinct order_id) as orders_per_customer
   from {{ ref('fact_orders') }}
-  group by customer_id
+  group by 1
 )
-select avg(order_count) as avg_orders_per_customer
-from per_customer;
+select
+  avg(orders_per_customer) as avg_orders_per_customer
+from per_cust

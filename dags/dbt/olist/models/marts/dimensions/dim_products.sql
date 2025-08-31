@@ -2,15 +2,13 @@
 
 select
   p.product_id,
-  p.product_category_name,
-  t.product_category_name_english,
-  p.product_name_length,
-  p.product_description_length,
-  p.product_photos_qty,
-  p.product_weight_g,
-  p.product_length_cm,
-  p.product_height_cm,
-  p.product_width_cm
+  coalesce(p.product_category_name, 'unknown') as product_category_name,
+
+  cast(p.product_name_lenght as int64)                as product_name_length,
+  cast(p.product_description_lenght as int64)         as product_description_length,
+  cast(p.product_photos_qty as int64)                 as product_photos_qty,
+  cast(p.product_weight_g as int64)                   as product_weight_g,
+  cast(p.product_length_cm as int64)                  as product_length_cm,
+  cast(p.product_height_cm as int64)                  as product_height_cm,
+  cast(p.product_width_cm as int64)                   as product_width_cm
 from {{ ref('stg_products') }} p
-left join {{ ref('stg_product_category_name_translation') }} t
-  on p.product_category_name = t.product_category_name
