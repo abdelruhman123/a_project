@@ -6,4 +6,4 @@ select
   e.order_purchase_timestamp,
   e.order_date,
   e.delivery_days
-from {{ ref('int_orders_enriched') }} e;
+from {{ ref('int_orders_enriched') }} e

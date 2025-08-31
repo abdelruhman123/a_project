@@ -7,4 +7,4 @@ select
   geolocation_lng,
   geolocation_city,
   geolocation_state
-from {{ source('landing', 'geolocation_landing_abdelrahman') }};
+from {{ source('landing', 'geolocation_landing_abdelrahman') }}

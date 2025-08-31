@@ -9,4 +9,4 @@ select
   extract(year from dt) as year,
   extract(month from dt) as month,
   format_date('%Y-%m', dt) as year_month
-from d;
+from d

@@ -9,4 +9,4 @@ select
   review_comment_message,
   review_creation_date,
   review_answer_timestamp
-from {{ source('landing', 'order_reviews_landing_abdelrahman') }};
+from {{ source('landing', 'order_reviews_landing_abdelrahman') }}

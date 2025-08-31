@@ -6,4 +6,4 @@ select
   seller_zip_code_prefix,
   seller_city,
   seller_state
-from {{ source('landing', 'sellers_landing_abdelrahman') }};
+from {{ source('landing', 'sellers_landing_abdelrahman') }}

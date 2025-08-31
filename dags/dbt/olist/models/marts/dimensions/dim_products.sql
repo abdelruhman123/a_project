@@ -11,4 +11,4 @@ select
   p.product_width_cm
 from {{ source('landing','products_landing_abdelrahman') }} p
 left join {{ source('landing','product_category_name_translation_landing_abdelrahman') }} t
-  on p.product_category_name = t.product_category_name;
+  on p.product_category_name = t.product_category_name

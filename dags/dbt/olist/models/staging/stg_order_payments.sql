@@ -7,4 +7,4 @@ select
   payment_type,
   payment_installments,
   payment_value
-from {{ source('landing', 'order_payments_landing_abdelrahman') }};
+from {{ source('landing', 'order_payments_landing_abdelrahman') }}

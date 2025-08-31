@@ -7,4 +7,4 @@ select
   customer_zip_code_prefix,
   customer_city,
   customer_state
-from {{ source('landing', 'customers_landing_abdelrahman') }};
+from {{ source('landing', 'customers_landing_abdelrahman') }}

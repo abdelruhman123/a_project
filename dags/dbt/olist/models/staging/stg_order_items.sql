@@ -7,4 +7,4 @@ select
   shipping_limit_date,
   price,
   freight_value
-from {{ source('landing','order_items_landing_abdelrahman') }};
+from {{ source('landing','order_items_landing_abdelrahman') }}

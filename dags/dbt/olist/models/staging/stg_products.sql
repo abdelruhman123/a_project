@@ -11,4 +11,4 @@ select
   product_length_cm,
   product_height_cm,
   product_width_cm
-from {{ source('landing', 'products_landing_abdelrahman') }};
+from {{ source('landing', 'products_landing_abdelrahman') }}

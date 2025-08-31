@@ -7,4 +7,4 @@ select
   i.price,
   i.freight_value,
   i.line_total
-from {{ ref('int_order_items_priced') }} i;
+from {{ ref('int_order_items_priced') }} i

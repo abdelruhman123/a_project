@@ -5,4 +5,4 @@ select
   op.payment_type,
   op.payment_installments,
   op.payment_value
-from {{ ref('stg_order_payments') }} op;
+from {{ ref('stg_order_payments') }} op
