@@ -1,6 +1,5 @@
 {{ config(materialized='view') }}
 
--- Order reviews staging view
 select
   review_id,
   order_id,
@@ -9,4 +8,4 @@ select
   review_comment_message,
   review_creation_date,
   review_answer_timestamp
-from {{ source('landing', 'order_reviews_landing_abdelrahman') }}
+from {{ source('project_landing','order_reviews_landing_abdelrahman') }}

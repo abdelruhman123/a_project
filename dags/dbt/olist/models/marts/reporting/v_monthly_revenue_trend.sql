@@ -1,9 +1,9 @@
 {{ config(materialized='view') }}
 
 select
-  format_date('%Y-%m', fo.order_date) as year_month,
-  sum(foi.line_total) as revenue
-from {{ ref('fact_orders') }} fo
-join {{ ref('fact_order_items') }} foi using (order_id)
+  format_timestamp('%Y-%m', order_purchase_timestamp) as year_month,
+  sum(oi.line_total) as revenue
+from {{ ref('fact_orders') }} o
+join {{ ref('fact_order_items') }} oi using(order_id)
 group by 1
-order by year_month;
+order by 1

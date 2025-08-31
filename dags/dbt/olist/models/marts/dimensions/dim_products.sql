@@ -1,7 +1,9 @@
 {{ config(materialized='table') }}
+
 select
   p.product_id,
-  coalesce(t.product_category_name_english, p.product_category_name) as product_category_name,
+  p.product_category_name,
+  t.product_category_name_english,
   p.product_name_length,
   p.product_description_length,
   p.product_photos_qty,
@@ -9,6 +11,6 @@ select
   p.product_length_cm,
   p.product_height_cm,
   p.product_width_cm
-from {{ source('landing','products_landing_abdelrahman') }} p
-left join {{ source('landing','product_category_name_translation_landing_abdelrahman') }} t
+from {{ ref('stg_products') }} p
+left join {{ ref('stg_product_category_name_translation') }} t
   on p.product_category_name = t.product_category_name

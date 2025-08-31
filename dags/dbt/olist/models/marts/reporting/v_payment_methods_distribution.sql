@@ -2,7 +2,7 @@
 
 select
   payment_type,
-  count(*) as tx_count
+  sum(payment_value) as total_value
 from {{ ref('fact_payments') }}
 group by 1
-order by tx_count desc;
+order by total_value desc

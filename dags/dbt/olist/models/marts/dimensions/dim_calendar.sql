@@ -1,12 +1,19 @@
 {{ config(materialized='table') }}
-with RECURSIVE d as (
-  select date('2016-01-01') as dt
-  union all
-  select date_add(dt, interval 1 day) from d where dt < date('2018-12-31')
+
+with days as (
+  select day
+  from unnest(
+    generate_date_array(date('2016-01-01'), date_add(current_date(), interval 365 day))
+  ) as day
 )
+
 select
-  dt as date_day,
-  extract(year from dt) as year,
-  extract(month from dt) as month,
-  format_date('%Y-%m', dt) as year_month
-from d
+  day                                    as date_day,
+  extract(year  from day)                as year,
+  extract(quarter from day)              as quarter,
+  extract(month  from day)               as month,
+  format_date('%Y-%m', day)              as year_month,
+  extract(week   from day)               as week,
+  extract(day    from day)               as day_of_month,
+  format_date('%A', day)                 as day_name
+from days

@@ -1,8 +1,9 @@
 {{ config(materialized='table') }}
+
 select
-  op.order_id,
-  op.payment_sequential,
-  op.payment_type,
-  op.payment_installments,
-  op.payment_value
-from {{ ref('stg_order_payments') }} op
+  order_id,
+  payment_sequential,
+  payment_type,
+  payment_installments,
+  payment_value
+from {{ ref('stg_order_payments') }}

@@ -1,10 +1,11 @@
 {{ config(materialized='table') }}
+
 select
-  i.order_id,
-  i.order_item_id,
-  i.product_id,
-  i.seller_id,
-  i.price,
-  i.freight_value,
-  i.line_total
-from {{ ref('int_order_items_priced') }} i
+  order_id,
+  customer_id,
+  order_status,
+  order_purchase_timestamp,
+  order_delivered_customer_date,
+  order_estimated_delivery_date,
+  delivery_days
+from {{ ref('int_orders_enriched') }}
