@@ -7,4 +7,4 @@ select
   payment_installments,
   payment_value,
   updated_at_timestamp
-from {{ source('project_landing','order_payments_landing_abdelrahman') }}
+from {{ source('landing','order_payments_landing_abdelrahman') }}

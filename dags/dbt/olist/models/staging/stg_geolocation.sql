@@ -7,4 +7,4 @@ select
   geolocation_city,
   geolocation_state,
   updated_at_timestamp
-from {{ source('project_landing','geolocation_landing_abdelrahman') }}
+from {{ source('landing','geolocation_landing_abdelrahman') }}

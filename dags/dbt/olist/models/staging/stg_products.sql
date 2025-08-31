@@ -11,4 +11,4 @@ select
   product_height_cm,
   product_width_cm,
   updated_at_timestamp
-from {{ source('project_landing','products_landing_abdelrahman') }}
+from {{ source('landing','products_landing_abdelrahman') }}

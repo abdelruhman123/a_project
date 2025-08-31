@@ -7,4 +7,4 @@ select
   customer_city,
   customer_state,
   updated_at_timestamp
-from {{ source('project_landing','customers_landing_abdelrahman') }}
+from {{ source('landing','customers_landing_abdelrahman') }}

@@ -10,4 +10,4 @@ select
   order_delivered_customer_date,
   order_estimated_delivery_date,
   updated_at_timestamp
-from {{ source('project_landing','orders_landing_abdelrahman') }}
+from {{ source('landing','orders_landing_abdelrahman') }}

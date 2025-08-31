@@ -9,4 +9,4 @@ select
   price,
   freight_value,
   updated_at_timestamp
-from {{ source('project_landing','order_items_landing_abdelrahman') }}
+from {{ source('landing','order_items_landing_abdelrahman') }}

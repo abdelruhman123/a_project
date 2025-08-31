@@ -6,4 +6,4 @@ select
   seller_city,
   seller_state,
   updated_at_timestamp
-from {{ source('project_landing','sellers_landing_abdelrahman') }}
+from {{ source('landing','sellers_landing_abdelrahman') }}
