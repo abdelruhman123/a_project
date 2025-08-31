@@ -1,0 +1,12 @@
+olist_bq:
+  target: prod
+  outputs:
+    prod:
+      type: bigquery
+      method: service-account
+      project: ready-de26
+      dataset: analytics
+      keyfile: /home/airflow/gcs/data/sa.json   # أو استخدم oauth أو impersonation
+      threads: 4
+      location: US
+      priority: interactive

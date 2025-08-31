@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: landing
+    database: ready-de26
+    schema: project_landing
+    tables:
+      - name: orders_landing_abdelrahman
+      - name: order_items_landing_abdelrahman
+      - name: order_reviews_landing_abdelrahman
+      - name: products_landing_abdelrahman
+      - name: product_category_name_translation_landing_abdelrahman
+      - name: sellers_landing_abdelrahman
+      - name: order_payments_landing_abdelrahman
+      - name: customers_landing_abdelrahman
+      - name: geolocation_landing_abdelrahman

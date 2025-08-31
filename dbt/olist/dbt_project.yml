@@ -1,0 +1,20 @@
+name: olist
+version: 1.0.0
+config-version: 2
+
+profile: olist_bq
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+target-path: "target"
+clean-targets: ["target", "dbt_modules"]
+
+models:
+  olist:
+    +materialized: table
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: table
