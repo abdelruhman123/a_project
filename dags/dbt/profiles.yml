@@ -1,0 +1,11 @@
+olist_bq:                         
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth               
+      project: ready-de26          
+      dataset: analytics           
+      location: US              
+      threads: 4
+      timeout_seconds: 300
